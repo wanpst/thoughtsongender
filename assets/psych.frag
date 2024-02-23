@@ -1,12 +1,15 @@
 #version 100
+
+// the noise effect requires high precision
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
 
 uniform float u_time;
 uniform vec2 u_resolution;
 uniform vec2 u_mouse;
-
-// just keep throwing numbers at the wall and eventually we'll get there!
-#define PI 3.14159265358979323846264338327950288
 
 // only god knows who came up with this
 float rand(vec2 uv) {
@@ -16,10 +19,22 @@ float rand(vec2 uv) {
 void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution;
 
-    vec2 coolifiedUV = uv + (6.0 * rand(uv)) * vec2(sin(u_time), cos(u_time));
-    float pattern = sin(pow(length(coolifiedUV), 3.0));
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+    vec3 color = vec3(
+        rand(sin(uv.yx)),
+        rand(sin(uv.xy * u_time)) * 0.8,
+        rand(sin(uv.yx * u_time))
+    );
 
-    vec3 color = sin(coolifiedUV.xyx + u_time + vec3(0, 2, 8)) + pattern;
-    color.g = (color.r + color.g + color.b) / 3.0;
-    gl_FragColor = vec4(fract(color), 1.0);
+    vec3 color_strong_red = vec3(
+        rand(sin(color.rg * u_time)),
+        color.g * 0.8,
+        color.b * 0.8
+    );
+    #else // we can't generate noise! just do something kinda cool
+    vec3 color = vec3(sin(uv.y), 0.0, sin(uv.y));
+    vec3 color_strong_red = vec3(sin(uv.y), 0.0, sin(uv.x) * 0.2);
+    #endif
+
+    gl_FragColor = vec4(mix(color, color_strong_red, sin(u_time) * 0.5 + 0.5), 1.0);
 }
